@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TaskManager Pro - Tu Gestor de Productividad</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fas fa-tasks"></i> <span>TaskManager Pro</span>
+            </div>
+            <nav class="menu">
+                <a href="#" class="menu-item active" data-section="inicio" aria-label="Ir a Inicio"><i class="fas fa-home"></i> <span>Inicio</span></a>
+                <a href="#" class="menu-item" data-section="mis-tareas" aria-label="Ir a Mis Tareas"><i class="fas fa-clipboard-list"></i> <span>Mis Tareas</span></a>
+                <a href="#" class="menu-item" data-section="proyectos" aria-label="Ir a Proyectos"><i class="fas fa-project-diagram"></i> <span>Proyectos</span></a>
+                <a href="#" class="menu-item" data-section="modo-enfoque" aria-label="Ir a Modo Enfoque"><i class="fas fa-brain"></i> <span>Modo Enfoque</span></a>
+                <a href="#" class="menu-item" data-section="notas" aria-label="Ir a Notas"><i class="fas fa-sticky-note"></i> <span>Notas</span></a>
+                <a href="#" class="menu-item" data-section="analiticas" aria-label="Ir a Analíticas"><i class="fas fa-chart-pie"></i> <span>Analíticas</span></a>
+                <a href="#" class="menu-item" data-section="colaboradores" aria-label="Ir a Colaboradores"><i class="fas fa-user-group"></i> <span>Colaboradores</span></a>
+                <a href="#" class="menu-item" data-section="recursos" aria-label="Ir a Recursos"><i class="fas fa-book"></i> <span>Recursos</span></a>
+                <a href="#" class="menu-item" data-section="configuracion" aria-label="Ir a Configuración"><i class="fas fa-cogs"></i> <span>Configuración</span></a>
+            </nav>
+            {% if user.role != 'Invitado' %}
+            <div class="new-btn"> <!-- Este div ahora actúa como contenedor relativo -->
+                <div class="new-dropdown-menu" id="new-dropdown-menu">
+                    <a href="#" class="dropdown-item" data-modal-target="addTask">
+                        <i class="fas fa-c  lipboard-list"></i> Nueva Tarea
+                    </a>
+                    <a href="#" class="dropdown-item" data-modal-target="addProject">
+                        <i class="fas fa-project-diagram"></i> Nuevo Proyecto
+                    </a>
+                </div>
+                <button class="add-new-btn" id="addNewGlobalBtn" aria-label="Añadir nuevo elemento"><i class="fas fa-plus-circle"></i> <span>Nuevo</span></button>
+            </div>
+            {% endif %}
+        </aside>
+
+        <main class="content">
+            <header class="topbar">
+                <div class="search-bar">
+                    <input type="text" id="globalSearchInput" placeholder="Buscar tareas, proyectos, notas..." aria-label="Barra de búsqueda">
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                </div>
+                <div class="user-profile">
+                    <span class="welcome-message">¡Hola, <strong>{{ user.first_name }}</strong>!</span>
+                    <img id="topbarUserAvatar" src="{{ user.avatar_url or url_for('static', filename='images/user-avatar.webp') }}" alt="Avatar del usuario" class="user-avatar">
+                    <a href="/logout" class="logout-btn" title="Cerrar Sesión"><i class="fas fa-sign-out-alt"></i></a>
+                </div>
+            </header>
+
+            <section id="inicio-section" class="content-section active-section">
+                <div class="section-header">
+                    <h2>Dashboard Personalizado</h2>
+                    <div class="header-actions">
+                        <button class="action-btn" aria-label="Actualizar dashboard"><i class="fas fa-sync-alt"></i> Actualizar</button>
+                        <button class="action-btn" aria-label="Filtrar elementos"><i class="fas fa-filter"></i> Filtrar</button>
+                    </div>
+                </div>
+                <div class="dashboard-grid">
+                    <div class="card stat-card total-tasks">
+                        <div class="card-icon"><i class="fas fa-list-check" aria-hidden="true"></i></div>
+                        <div class="card-content">
+                            <p class="card-title">Tareas Totales</p>
+                            <span class="card-value">--</span>
+                        </div>
+                    </div>
+                    <div class="card stat-card completed-tasks">
+                        <div class="card-icon"><i class="fas fa-check-circle" aria-hidden="true"></i></div>
+                        <div class="card-content">
+                            <p class="card-title">Completadas Hoy</p>
+                            <span class="card-value">--</span>
+                        </div>
+                    </div>
+                    <div class="card stat-card pending-tasks">
+                        <div class="card-icon"><i class="fas fa-hourglass-half" aria-hidden="true"></i></div>
+                        <div class="card-content">
+                            <p class="card-title">Pendientes (Hoy)</p>
+                            <span class="card-value">--</span>
+                        </div>
+                    </div>
+                    <div class="card stat-card upcoming-deadlines">
+                        <div class="card-icon"><i class="fas fa-calendar-alt" aria-hidden="true"></i></div>
+                        <div class="card-content">
+                            <p class="card-title">Por Iniciar (Hoy)</p>
+                            <span class="card-value">--</span>
+                        </div>
+                    </div>
+
+                    <div class="card recent-activity dashboard-card">
+                        <h3><i class="fas fa-history" aria-hidden="true"></i> Actividad Reciente</h3>
+                        <ul id="recent-activity-list">
+                            <!-- La actividad reciente se cargará aquí dinámicamente -->
+                            <li class="loading-activity">Cargando actividad...</li>
+                        </ul>
+                    </div>
+
+                    {% if user.role != 'Invitado' %}
+                    <div class="card quick-actions dashboard-card">
+                        <h3><i class="fas fa-bolt" aria-hidden="true"></i> Acciones Rápidas</h3>
+                        <div class="action-buttons-grid">
+                            <button class="quick-action-btn" data-modal-target="addTask" aria-label="Añadir nueva tarea"><i class="fas fa-plus"></i> Nueva Tarea</button>
+                            <button class="quick-action-btn" data-modal-target="addProject" aria-label="Añadir nuevo proyecto"><i class="fas fa-project-diagram"></i> Nuevo Proyecto</button>
+                            <button class="quick-action-btn" data-modal-target="addNote" aria-label="Añadir nueva nota"><i class="fas fa-sticky-note"></i> Añadir Nota</button>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="card important-notes dashboard-card">
+                        <h3><i class="fas fa-thumbtack" aria-hidden="true"></i> Notas Importantes</h3>
+                        <div id="important-notes-list">
+                            <!-- Las notas se cargarán aquí dinámicamente -->
+                            <p class="loading-notes">Cargando notas...</p>
+                        </div>
+                        <button class="view-all-notes-btn" aria-label="Ver todas las notas" data-section="notas" style="display: none;">Ver Todas las Notas <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="mis-tareas-section" class="content-section">
+                <div class="section-header">
+                    <h2>Mis Tareas</h2>
+                    <div class="header-actions">
+                        {% if user.role != 'Invitado' %}
+                        <button class="add-item-btn" data-modal-target="addTask" aria-label="Añadir nueva tarea"><i class="fas fa-plus"></i> Añadir Tarea</button>
+                        {% endif %}
+                        <select id="sortTasksSelect" class="action-btn" aria-label="Opciones de ordenamiento de tareas">
+                            <option value="">Ordenar por...</option>
+                            <option value="priority-desc">Prioridad (Mayor a Menor)</option>
+                            <option value="priority-asc">Prioridad (Menor a Mayor)</option>
+                            <option value="status-desc">Estado (Pendiente primero)</option>
+                            <option value="status-asc">Estado (Completado primero)</option>
+                        </select>
+                        <button id="applySortBtn" class="action-btn" aria-label="Aplicar ordenamiento"><i class="fas fa-sort-amount-down"></i> Aplicar Orden</button>
+                    </div>
+                </div>
+                <div class="filters-bar">
+                    <span class="filter-option active" data-filter="all" aria-label="Mostrar todas las tareas">Todas</span>
+                    <span class="filter-option" data-filter="today" aria-label="Mostrar tareas para hoy">Hoy</span>
+                    <span class="filter-option" data-filter="next-7-days" aria-label="Mostrar tareas para los próximos 7 días">Próximos 7 días</span>
+                    <span class="filter-option" data-filter="urgent" aria-label="Mostrar tareas urgentes">Urgentes</span>
+                    <span class="filter-option" data-filter="completed" aria-label="Mostrar tareas completadas">Completadas</span>
+                </div>
+                <div id="task-list" class="item-list">
+                    <div class="task-item" data-task-id="1">
+                        <input type="checkbox" class="task-checkbox" aria-label="Marcar tarea como completada">
+                        <div class="task-details">
+                            <h4 class="task-title">Investigar nuevas APIs para integraciones</h4>
+                            <p class="task-meta"><i class="fas fa-calendar-alt" aria-hidden="true"></i> Vence: 20 Jul | <i class="fas fa-project-diagram" aria-hidden="true"></i> Proyecto: Integración de Sistemas</p>
+                            <p class="task-description">Buscar y evaluar APIs RESTful para la conexión con servicios externos.</p>
+                        </div>
+                        <div class="task-actions">
+                            <span class="task-priority high"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i> Alta</span>
+                            <button class="task-action-btn edit-task-btn" aria-label="Editar tarea"><i class="fas fa-edit"></i></button>
+                            <button class="task-action-btn delete-task-btn" aria-label="Eliminar tarea"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    </div>
+                    <div class="task-item completed" data-task-id="2">
+                        <input type="checkbox" class="task-checkbox" checked aria-label="Tarea completada">
+                        <div class="task-details">
+                            <h4 class="task-title">Crear borrador de propuesta para cliente X</h4>
+                            <p class="task-meta"><i class="fas fa-calendar-alt" aria-hidden="true"></i> Vence: 18 Jul | <i class="fas fa-project-diagram" aria-hidden="true"></i> Proyecto: Propuestas Comerciales</p>
+                            <p class="task-description">Redactar el primer borrador de la propuesta de servicios para el cliente X.</p>
+                        </div>
+                        <div class="task-actions">
+                            <span class="task-priority medium"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i> Media</span>
+                            <button class="task-action-btn edit-task-btn" aria-label="Editar tarea"><i class="fas fa-edit"></i></button>
+                            <button class="task-action-btn delete-task-btn" aria-label="Eliminar tarea"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    </div>
+                    <div class="empty-state" style="display: none;">
+                        <i class="fas fa-tasks-alt" aria-hidden="true"></i>
+                        <p>Aún no hay tareas. ¡Empieza creando una nueva!</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="proyectos-section" class="content-section">
+                <div class="section-header">
+                    <h2>Proyectos</h2>
+                    <div class="header-actions">
+                    {% if user.role != 'Invitado' %}
+                    <button class="add-item-btn" data-modal-target="addProject" aria-label="Añadir nuevo proyecto"><i class="fas fa-plus"></i> Nuevo Proyecto</button>
+                    {% endif %}
+                    <select id="project-status-filter" class="action-btn">
+                    <option value="all">Todos los estados</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="en progreso">En Proceso</option>
+                    <option value="completada">Completado</option>
+                    <option value="cancelada">Cancelado</option>
+                    </select>
+                    <button class="action-btn" aria-label="Cambiar a vista de cuadrícula"><i class="fas fa-th-large"></i> Vista Cuadrícula</button>
+                    <button class="action-btn" aria-label="Cambiar a vista de lista"><i class="fas fa-list"></i> Vista Lista</button>
+                    </div>
+                </div>
+                <div id="project-grid" class="project-grid item-list">
+                    <div class="card project-card" data-project-id="1">
+                        <div class="project-header">
+                            <h4 class="project-title">Desarrollo Plataforma E-commerce</h4>
+                            <span class="project-status pendiente">Pendiente</span>
+                        </div>
+                        <p class="project-description">Creación de una plataforma completa de comercio electrónico, incluyendo front-end, back-end y pasarela de pagos.</p>
+                        <div class="project-stats">
+                            <span><i class="fas fa-tasks" aria-hidden="true"></i> 15/20 Tareas</span>
+                            <span><i class="fas fa-calendar-alt" aria-hidden="true"></i> Fin: 30 Ago</span>
+                        </div>
+                        <div class="project-team">
+                            <img src="{{ url_for('static', filename='images/team-member1.webp') }}" alt="Avatar de Miembro del Equipo 1" class="team-avatar">
+                            <img src="{{ url_for('static', filename='images/team-member2.webp') }}" alt="Avatar de Miembro del Equipo 2" class="team-avatar">
+                            <span>+3</span>
+                        </div>
+                        <button class="project-details-btn" aria-label="Ver detalles del proyecto">Ver Detalles <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="card project-card" data-project-id="2">
+                        <div class="project-header">
+                            <h4 class="project-title">Campaña de Marketing Digital Q3</h4>
+                            <span class="project-status en-proceso">En Proceso</span>
+                        </div>
+                        <p class="project-description">Diseño e implementación de la estrategia de marketing digital para el tercer trimestre.</p>
+                        <div class="project-stats">
+                            <span><i class="fas fa-tasks" aria-hidden="true"></i> 8/12 Tareas</span>
+                            <span><i class="fas fa-calendar-alt" aria-hidden="true"></i> Fin: 15 Sep</span>
+                        </div>
+                        <div class="project-team">
+                            <img src="{{ url_for('static', filename='images/team-member3.webp') }}" alt="Avatar de Miembro del Equipo 3" class="team-avatar">
+                            <span>+2</span>
+                        </div>
+                        <button class="project-details-btn" aria-label="Ver detalles del proyecto">Ver Detalles <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="empty-state" style="display: none;">
+                        <i class="fas fa-folder-open" aria-hidden="true"></i>
+                        <p>No hay proyectos activos. ¡Crea tu primer proyecto!</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="modo-enfoque-section" class="content-section">
+                <div class="section-header">
+                    <h2>Modo Enfoque <i class="fas fa-brain" aria-hidden="true"></i></h2>
+                </div>
+                <div id="focus-messages" class="focus-messages"></div>
+                <div class="focus-layout">
+                    <!-- Columna Principal: Panel de Control -->
+                    <div class="focus-main-column">
+                        <div class="card focus-control-panel">
+                            <div class="focus-section">
+                                <h3><i class="fas fa-bullseye"></i> 1. Elige tu Misión</h3>
+                                <p>Selecciona la tarea en la que te vas a concentrar para empezar.</p>
+                                <select id="task-to-focus" class="select-task">
+                                    <option value="">Selecciona una tarea...</option>
+                                    <!-- Opciones cargadas por JS -->
+                                </select>
+                            </div>
+
+                            <div class="focus-section">
+                                <h3><i class="fas fa-check-double"></i> 2. Define tus Objetivos</h3>
+                                <p>Divide tu misión en pequeños pasos para mantener la claridad y el enfoque.</p>
+                                <div class="focus-objectives-block">
+                                    <form id="focusObjectivesForm" autocomplete="off">
+                                        <input type="text" id="focusObjectiveInput" placeholder="Añadir un micro-objetivo..." maxlength="80">
+                                        <button type="submit" class="btn" aria-label="Añadir objetivo"><i class="fas fa-plus"></i></button>
+                                    </form>
+                                    <ul id="focusObjectivesList" class="focus-objectives-list"></ul>
+                                </div>
+                            </div>
+
+                            <div class="focus-section focus-timer-section">
+                                <h3><i class="fas fa-stopwatch-20"></i> 3. Inicia el Temporizador</h3>
+                                <p>Activa el Pomodoro y sumérgete en un estado de flujo profundo.</p>
+                                <div class="timer-display">
+                                    <span id="minutes">25</span>:<span id="seconds">00</span>
+                                </div>
+                                <div class="timer-controls">
+                                    <button id="start-timer" class="control-btn" aria-label="Iniciar temporizador"><i class="fas fa-play"></i></button>
+                                    <button id="pause-timer" class="control-btn" aria-label="Pausar temporizador"><i class="fas fa-pause"></i></button>
+                                    <button id="reset-timer" class="control-btn" aria-label="Reiniciar temporizador"><i class="fas fa-sync-alt"></i></button>
+                                </div>
+                                <p class="timer-status" id="timer-status">¡Listo para empezar!</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Columna Lateral: Estadísticas y Música -->
+                    <div class="focus-side-column">
+                        <div class="card focus-stats-card">
+                            <h3><i class="fas fa-chart-line"></i> Estadísticas de Enfoque</h3>
+                            <div id="focus-stats-container">
+                                <!-- Las estadísticas se cargarán aquí -->
+                            </div>
+                        </div>
+                        <div class="focus-music-player card">
+                            <h3><i class="fas fa-music"></i> Música para Concentrarse</h3>
+                            <p class="music-subtitle">Una playlist seleccionada para ayudarte a fluir.</p>
+                            <iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/playlist/6AuKdzUEpokgfoJgfZZdO4?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+                            <div class="spotify-fallback">
+                                <p>Si el reproductor no carga, puedes <a href="https://open.spotify.com/playlist/6AuKdzUEpokgfoJgfZZdO4" target="_blank" rel="noopener noreferrer">abrir la playlist en Spotify</a>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="notas-section" class="content-section">
+                <div class="section-header">
+                    <h2>Mis Notas <i class="fas fa-sticky-note" aria-hidden="true"></i></h2>
+                    <div class="header-actions">
+                        <button class="add-item-btn" data-modal-target="addNote" aria-label="Añadir nueva nota"><i class="fas fa-plus"></i> Nueva Nota</button>
+                        <select id="notes-filter" class="action-btn" aria-label="Filtrar notas">
+                            <option value="all">Todas las notas</option>
+                            <option value="pinned">Solo ancladas</option>
+                            <option value="unpinned">No ancladas</option>
+                        </select>
+                        <button class="action-btn" id="notes-view-toggle" aria-label="Cambiar vista"><i class="fas fa-th-large"></i> Vista Cuadrícula</button>
+                    </div>
+                </div>
+                <div id="all-notes-container" class="notes-container">
+                    <div id="all-notes-list" class="notes-grid">
+                        <!-- Las notas se cargarán aquí dinámicamente -->
+                        <div class="loading-state">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Cargando notas...</p>
+                        </div>
+                    </div>
+                    <div class="empty-state" id="notes-empty-state" style="display: none;">
+                        <i class="fas fa-sticky-note" aria-hidden="true"></i>
+                        <p>No tienes notas aún. ¡Crea tu primera nota!</p>
+                        <button class="btn primary-btn" data-modal-target="addNote">
+                            <i class="fas fa-plus"></i> Crear Primera Nota
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="analiticas-section" class="content-section">
+                <div class="section-header">
+                    <h2>Analíticas de Productividad <i class="fas fa-chart-pie" aria-hidden="true"></i></h2>
+                    <div class="header-actions">
+                        <button id="export-data-btn" class="action-btn" aria-label="Exportar datos"><i class="fas fa-download"></i> Exportar Datos</button>
+                        <button class="action-btn" id="date-range-btn" aria-label="Seleccionar rango de fechas"><i class="fas fa-calendar-alt"></i> <span id="date-range-label">Rango de Fechas</span></button>
+                    </div>
+                </div>
+                <!-- Nueva estructura de analíticas -->
+                <div class="analytics-layout">
+                    <!-- Fila de KPIs (Indicadores Clave de Rendimiento) -->
+                    <div class="analytics-kpi-grid">
+                        <div class="card kpi-card" id="kpi-completed-tasks">
+                            <div class="kpi-icon" style="background-color: rgba(102, 187, 106, 0.1);"><i class="fas fa-check-circle" style="color: var(--accent-color);"></i></div>
+                            <div class="kpi-content">
+                                <span class="kpi-value">--</span>
+                                <p class="kpi-title">Tareas Completadas (Semana)</p>
+                            </div>
+                        </div>
+                        <div class="card kpi-card" id="kpi-focus-time">
+                            <div class="kpi-icon" style="background-color: rgba(255, 138, 101, 0.1);"><i class="fas fa-stopwatch-20" style="color: var(--primary-color);"></i></div>
+                            <div class="kpi-content">
+                                <span class="kpi-value">--</span>
+                                <p class="kpi-title">Tiempo de Enfoque (Semana)</p>
+                            </div>
+                        </div>
+                        <div class="card kpi-card" id="kpi-collab-projects">
+                            <div class="kpi-icon" style="background-color: rgba(142, 68, 173, 0.1);"><i class="fas fa-user-friends" style="color: #8e44ad;"></i></div>
+                            <div class="kpi-content">
+                                <span class="kpi-value">--</span>
+                                <p class="kpi-title">Proyectos Colaborativos</p>
+                            </div>
+                        </div>
+                        <div class="card kpi-card" id="kpi-productivity">
+                            <div class="kpi-icon" style="background-color: rgba(52, 152, 219, 0.1);"><i class="fas fa-chart-line" style="color: #3498db;"></i></div>
+                            <div class="kpi-content">
+                                <span class="kpi-value">--</span>
+                                <p class="kpi-title">Productividad Semanal</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Fila de Gráficos Detallados -->
+                    <div class="analytics-charts-grid">
+                        <div class="card analytics-chart-card">
+                        <h3>Progreso General de Tareas</h3>
+                        <div class="chart-container" id="tasks-progress-chart">
+                            <canvas id="tasksProgressCanvas" width="420" height="260"></canvas>
+                        </div>
+                        <p class="chart-summary"><i class="fas fa-trophy" style="color:#FFD700;"></i> Has completado el <span class="highlight">75%</span> de tus tareas este mes.</p>
+                    </div>
+                        <div class="card analytics-chart-card">
+                        <h3>Distribución de Proyectos por Usuario</h3>
+                        <div class="chart-container" id="projects-distribution-chart">
+                            <canvas id="projectsDistributionCanvas" width="420" height="260"></canvas>
+                        </div>
+                        <div class="chart-summary" id="distribution-summary-container">
+                            <p>Cargando datos de distribución...</p>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="colaboradores-section" class="content-section">
+                <div class="section-header">
+                    <h2>Gestión de Colaboradores <i class="fas fa-users-line" aria-hidden="true"></i></h2>
+                    <div class="header-actions">
+                        {% if user.role == 'Administrador' %}
+                        <button class="add-item-btn" data-modal-target="addUser" aria-label="Añadir nuevo colaborador"><i class="fas fa-user-plus"></i> Añadir Colaborador</button>
+                        <button class="action-btn" data-modal-target="manageRoles" aria-label="Administrar roles y permisos"><i class="fas fa-user-cog"></i> Roles y Permisos</button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="filters-bar">
+                    <div class="search-bar-local">
+                        <input type="text" id="collaborator-search-input" placeholder="Buscar por nombre o rol..." aria-label="Buscar colaborador">
+                        <i class="fas fa-search" aria-hidden="true"></i>
+                    </div>
+                    <select id="collaborator-role-filter" class="action-btn" aria-label="Filtrar por rol">
+                        <option value="all">Todos los roles</option>
+                        <!-- Roles se cargarán dinámicamente -->
+                    </select>
+                </div>
+                <div id="collaborator-list" class="item-list user-grid">
+                    <div class="empty-state" style="display: none;">
+                        <i class="fas fa-users-cog" aria-hidden="true"></i>
+                        <p>Gestiona los colaboradores de tu equipo aquí. ¡Invita a nuevos miembros!</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="recursos-section" class="content-section">
+                <div class="section-header">
+                    <h2>Base de Recursos <i class="fas fa-book" aria-hidden="true"></i></h2>
+                    <div class="header-actions">
+                        {% if user.role != 'Invitado' %}
+                        <button class="add-item-btn" data-modal-target="addResource" aria-label="Añadir nuevo recurso"><i class="fas fa-plus"></i> Añadir Recurso</button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div id="resource-grid" class="resource-grid item-list">
+                    <!-- Los recursos se cargarán aquí dinámicamente -->
+                    <div class="loading-state" style="display: none;"><i class="fas fa-spinner fa-spin"></i><p>Cargando recursos...</p></div>
+                    <div class="empty-state" style="display: none; grid-column: 1 / -1;">
+                        <i class="fas fa-book-open" aria-hidden="true"></i>
+                        <p>Gestiona todos tus recursos, documentos y enlaces importantes aquí.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="configuracion-section" class="content-section">
+                <div class="section-header">
+                    <h2>Configuración</h2>
+                </div>
+                <div class="settings-grid">
+                    <div class="card setting-card">
+                        <h3>Perfil y Cuenta</h3>
+                        <p>Actualiza tu información personal y detalles de la cuenta.</p>
+                        <button class="action-btn" data-modal-target="editProfile" aria-label="Editar perfil"><i class="fas fa-user-circle"></i> Editar Perfil</button>
+                    </div>
+                    <div class="card setting-card">
+                        <h3>Apariencia</h3>
+                        <p>Personaliza el tema y la apariencia de tu interfaz.</p>
+                        <button class="action-btn" data-modal-target="customizeAppearance" aria-label="Personalizar apariencia"><i class="fas fa-paint-brush"></i> Personalizar Apariencia</button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <div id="modalAddTask" class="modal">
+        <div class="modal-content">
+            <span class="close-button" aria-label="Cerrar modal de añadir tarea">&times;</span>
+            <h2><i class="fas fa-plus-circle"></i> Nueva Tarea</h2>
+            <form id="formAddTask">
+                <div class="form-group">
+                    <label for="addTaskTitle">Título de la Tarea</label>
+                    <input type="text" id="addTaskTitle" name="title" required placeholder="Ej: Investigar nuevo framework JS">
+                </div>
+                <div class="form-group">
+                    <label for="addTaskDescription">Descripción (Opcional)</label>
+                    <textarea id="addTaskDescription" name="description" placeholder="Detalles de la tarea..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="addTaskDueDate">Fecha de Vencimiento</label>
+                    <input type="date" id="addTaskDueDate" name="due_date">
+                </div>
+                <div class="form-group">
+                    <label for="addTaskProject">Proyecto</label>
+                    <select id="addTaskProject" name="project_id">
+                        <option value="">Selecciona un proyecto</option>
+                        <!-- Opciones se llenarán con JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="addTaskAssignedTo">Asignado a</label>
+                    <select id="addTaskAssignedTo" name="assigned_to">
+                        <option value="">Selecciona un usuario</option>
+                        <!-- Opciones se llenarán con JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="addTaskStatus">Estado</label>
+                    <select id="addTaskStatus" name="status">
+                        <option value="pendiente">Pendiente</option>
+                        <option value="en_progreso">En Progreso</option>
+                        <option value="completada">Completada</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="addTaskPriority">Prioridad</label>
+                    <select id="addTaskPriority" name="worseness" required>
+                        <option value="Baja">Baja</option>
+                        <option value="media">Media</option>
+                        <option value="urgente">Urgente</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn primary-btn"><i class="fas fa-save"></i> Guardar Tarea</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalAddProject" class="modal">
+        <div class="modal-content">
+            <span class="close-button" aria-label="Cerrar modal de añadir proyecto">&times;</span>
+            <h2><i class="fas fa-project-diagram"></i> Nuevo Proyecto</h2>
+            <form id="formAddProject">
+                <div class="form-group">
+                    <label for="addProjectTitle">Título del Proyecto</label>
+                    <input type="text" id="addProjectTitle" name="title" required placeholder="Ej: Lanzamiento de App Móvil">
+                </div>
+                <div class="form-group">
+                    <label for="addProjectDescription">Descripción</label>
+                    <textarea id="addProjectDescription" name="description" placeholder="Breve descripción del proyecto..."></textarea>
+                </div>
+                <button type="submit" class="btn primary-btn"><i class="fas fa-save"></i> Crear Proyecto</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR PROYECTO -->
+    <div id="modalEditProject" class="modal">
+        <div class="modal-content">
+            <span class="close-button" aria-label="Cerrar modal de editar proyecto">&times;</span>
+            <h2><i class="fas fa-edit"></i> Editar Proyecto</h2>
+            <form id="formEditProject">
+                <input type="hidden" id="editProjectId" name="project_id">
+                <div class="form-group">
+                    <label for="editProjectTitle">Título del Proyecto</label>
+                    <input type="text" id="editProjectTitle" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="editProjectDescription">Descripción</label>
+                    <textarea id="editProjectDescription" name="description"></textarea>
+                </div>
+                <button type="submit" class="btn primary-btn"><i class="fas fa-save"></i> Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalAddResource" class="modal">
+        <div class="modal-content">
+            <span class="close-button" aria-label="Cerrar modal de añadir recurso">&times;</span>
+            <h2><i class="fas fa-book"></i> Nuevo Recurso</h2>
+            <form id="formAddResource" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="resourceTitle">Título del Recurso</label>
+                    <input type="text" id="resourceTitle" name="title" required placeholder="Ej: Guía de Estilo de Marca">
+                </div>
+                <div class="form-group">
+                    <label for="resourceDescription">Descripción (Opcional)</label>
+                    <textarea id="resourceDescription" name="description" placeholder="Breve descripción del recurso..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="resourceType">Tipo de Recurso</label>
+                    <select id="resourceType" name="type">
+                        <option value="document">Documento (Subir)</option>
+                        <option value="image">Imagen (Subir)</option>
+                        <option value="link">Enlace Web</option>
+                        <option value="video">Video (Enlace)</option>
+                        <option value="other">Otro</option>
+                    </select>
+                </div>
+                <!-- Contenedor para la subida de archivo (visible por defecto) -->
+                <div class="form-group" id="resourceFileInputContainer">
+                    <label for="resourceFile">Subir Archivo</label>
+                    <input type="file" id="resourceFile" name="resourceFile">
+                </div>
+                <!-- Contenedor para la entrada de URL (oculto por defecto) -->
+                <div class="form-group" id="resourceUrlInputContainer" style="display: none;">
+                    <label for="resourceUrl">URL del Recurso</label>
+                    <input type="url" id="resourceUrl" name="url_or_path" placeholder="https://ejemplo.com/recurso">
+                </div>
+                <div class="form-group">
+                    <label for="resourceCategory">Categoría (Opcional)</label>
+                    <input type="text" id="resourceCategory" name="category" placeholder="Ej: Diseño, Desarrollo, Marketing">
+                </div>
+                <button type="submit" class="btn primary-btn"><i class="fas fa-save"></i> Guardar Recurso</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalAddNote" class="modal">
+        <div class="modal-content">
+            <span class="close-button" aria-label="Cerrar modal de añadir nota">&times;</span>
+            <h2><i class="fas fa-sticky-note"></i> Nueva Nota</h2>
+            <form id="formAddNote">
+                <div class="form-group">
+                    <label for="addNoteContent">Contenido de la Nota</label>
+                    <textarea id="addNoteContent" name="content" required placeholder="Escribe tu recordatorio o idea aquí..." rows="6"></textarea>
+                </div>
+                <div class="form-group">
+                    <input type="checkbox" id="addNoteIsPinned" name="is_pinned" checked>
+                    <label for="addNoteIsPinned" style="display: inline-block; font-weight: normal;">Anclar en el dashboard</label>
+                </div>
+                <button type="submit" class="btn primary-btn"><i class="fas fa-save"></i> Guardar Nota</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalEditNote" class="modal">
+        <div class="modal-content">
+            <span class="close-button" aria-label="Cerrar modal de editar nota">&times;</span>
+            <h2><i class="fas fa-edit"></i> Editar Nota</h2>
+            <form id="formEditNote">
+                <input type="hidden" id="editNoteId" name="note_id">
+                <div class="form-group">
+                    <label for="editNoteContent">Contenido de la Nota</label>
+                    <textarea id="editNoteContent" name="content" required placeholder="Escribe tu recordatorio o idea aquí..." rows="6"></textarea>
+                </div>
+                <div class="form-group">
+                    <input type="checkbox" id="editNoteIsPinned" name="is_pinned">
+                    <label for="editNoteIsPinned" style="display: inline-block; font-weight: normal;">Anclar en el dashboard</label>
+                </div>
+                <button type="submit" class="btn primary-btn"><i class="fas fa-save"></i> Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR PERFIL -->
+    <div id="modalEditProfile" class="modal" aria-labelledby="editProfileTitle">
+        <div class="modal-content wide-modal">
+            <span class="close-button" aria-label="Cerrar modal de editar perfil">&times;</span>
+            <h2 id="editProfileTitle"><i class="fas fa-user-edit"></i> Editar Perfil</h2>
+            <form id="formEditProfile" enctype="multipart/form-data">
+                <div class="edit-profile-layout">
+                    <!-- Columna del Avatar -->
+                    <div class="avatar-upload-container">
+                        <label for="editProfileAvatar" class="avatar-label">
+                            <img src="{{ user.avatar_url or url_for('static', filename='images/user-avatar.webp') }}" alt="Vista previa del avatar" id="avatarPreview" class="user-avatar-preview">
+                            <div class="avatar-overlay">
+                                <i class="fas fa-camera"></i>
+                                <span>Cambiar foto</span>
+                            </div>
+                        </label>
+                        <input type="file" id="editProfileAvatar" name="avatar" accept="image/png, image/jpeg, image/webp" class="sr-only">
+                    </div>
+
+                    <!-- Columna de la Información -->
+                    <div class="profile-info-fields">
+                        <div class="form-group">
+                            <label for="profileFirstName">Nombre</label>
+                            <input type="text" id="profileFirstName" value="{{ user.first_name }}" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label for="profileLastName">Apellido</label>
+                            <input type="text" id="profileLastName" value="{{ user.last_name or '' }}" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label for="profileEmail">Email</label>
+                            <input type="email" id="profileEmail" value="{{ user.email or '' }}" disabled>
+                        </div>
+                        <small>Para cambiar estos datos, contacta a un administrador.</small>
+                    </div>
+                </div>
+                <button type="submit" class="btn primary-btn" style="margin-top: 15px;"><i class="fas fa-save"></i> Guardar Foto</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DETALLES DE PROYECTO -->
+    <div id="modalProjectDetails" class="modal">
+        <div class="modal-content">
+            <span class="close-button" aria-label="Cerrar modal de detalles de proyecto">&times;</span>
+            <h2 id="projectDetailsTitle"><i class="fas fa-project-diagram"></i> Detalles del Proyecto</h2>
+            <div id="projectDetailsBody">
+                <!-- Aquí se cargan los detalles dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PERFIL DE COLABORADOR -->
+    <div id="modalCollaboratorProfile" class="modal">
+        <div class="modal-content profile-modal-content">
+            <span class="close-button" aria-label="Cerrar modal de perfil">&times;</span>
+            <h2><i class="fas fa-user-circle"></i> Perfil del Colaborador</h2>
+            <div id="profile-content-container">
+                <!-- El contenido del perfil se cargará aquí dinámicamente -->
+                <div class="loading-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Cargando perfil...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL GESTIONAR ROLES -->
+    <div id="modalManageRoles" class="modal">
+        <div class="modal-content wide-modal">
+            <span class="close-button" aria-label="Cerrar modal de gestionar roles">&times;</span>
+            <h2><i class="fas fa-user-cog"></i> Gestionar Roles y Permisos</h2>
+            <p>Edita o elimina los roles existentes en tu equipo. Los usuarios con roles eliminados serán asignados al rol "Colaborador".</p>
+            
+            <div class="role-management-container">
+                <ul id="role-management-list" class="role-management-list">
+                    <!-- Los roles se cargarán aquí dinámicamente -->
+                    <div class="loading-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Cargando roles...</p>
+                    </div>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- MODAL PERSONALIZAR APARIENCIA -->
+    <div id="modalCustomizeAppearance" class="modal">
+        <div class="modal-content wide-modal">
+            <span class="close-button" aria-label="Cerrar modal de personalizar apariencia">&times;</span>
+            <h2><i class="fas fa-paint-brush"></i> Personalizar Apariencia</h2>
+            
+            <div class="appearance-customization">
+                <!-- Sección de Temas -->
+                <div class="customization-section">
+                    <h3><i class="fas fa-palette"></i> Tema de Color</h3>
+                    <p>Elige el esquema de colores que más te guste</p>
+                    <div class="theme-options">
+                        <div class="theme-option" data-theme="default">
+                            <div class="theme-preview default-theme">
+                                <div class="theme-color primary"></div>
+                                <div class="theme-color secondary"></div>
+                                <div class="theme-color accent"></div>
+                            </div>
+                            <span>Azul Profesional</span>
+                        </div>
+                        <div class="theme-option" data-theme="dark">
+                            <div class="theme-preview dark-theme">
+                                <div class="theme-color primary"></div>
+                                <div class="theme-color secondary"></div>
+                                <div class="theme-color accent"></div>
+                            </div>
+                            <span>Modo Oscuro</span>
+                        </div>
+                        <div class="theme-option" data-theme="green">
+                            <div class="theme-preview green-theme">
+                                <div class="theme-color primary"></div>
+                                <div class="theme-color secondary"></div>
+                                <div class="theme-color accent"></div>
+                            </div>
+                            <span>Verde Natura</span>
+                        </div>
+                        <div class="theme-option" data-theme="purple">
+                            <div class="theme-preview purple-theme">
+                                <div class="theme-color primary"></div>
+                                <div class="theme-color secondary"></div>
+                                <div class="theme-color accent"></div>
+                            </div>
+                            <span>Púrpura Creativo</span>
+                        </div>
+                        <div class="theme-option" data-theme="orange">
+                            <div class="theme-preview orange-theme">
+                                <div class="theme-color primary"></div>
+                                <div class="theme-color secondary"></div>
+                                <div class="theme-color accent"></div>
+                            </div>
+                            <span>Naranja Energético</span>
+                        </div>
+                        <div class="theme-option" data-theme="red">
+                            <div class="theme-preview red-theme">
+                                <div class="theme-color primary"></div>
+                                <div class="theme-color secondary"></div>
+                                <div class="theme-color accent"></div>
+                            </div>
+                            <span>Rojo Dinámico</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección de Personalización de Colores -->
+                <div class="customization-section">
+                    <h3><i class="fas fa-eyedropper"></i> Colores Personalizados</h3>
+                    <p>Crea tu propio esquema de colores personalizado</p>
+                    <div class="custom-colors">
+                        <div class="color-input-group">
+                            <label for="customPrimaryColor">Color Primario</label>
+                            <input type="color" id="customPrimaryColor" value="#ff8a65">
+                        </div>
+                        <div class="color-input-group">
+                            <label for="customPrimaryDarkColor">Primario Oscuro</label>
+                            <input type="color" id="customPrimaryDarkColor" value="#ff7043">
+                        </div>
+                        <div class="color-input-group">
+                            <label for="customSecondaryColor">Color Secundario</label>
+                            <input type="color" id="customSecondaryColor" value="#5d4037">
+                        </div>
+                        <div class="color-input-group">
+                            <label for="customAccentColor">Color de Acento</label>
+                            <input type="color" id="customAccentColor" value="#66bb6a">
+                        </div>
+                        <div class="color-input-group">
+                            <label for="customAccentDarkColor">Acento Oscuro</label>
+                            <input type="color" id="customAccentDarkColor" value="#57a05a">
+                        </div>
+                        <div class="color-input-group">
+                            <label for="customBackgroundLightColor">Fondo Principal</label>
+                            <input type="color" id="customBackgroundLightColor" value="#fff8e1">
+                        </div>
+                        <div class="color-input-group">
+                            <label for="customBackgroundDarkColor">Fondo Secundario</label>
+                            <input type="color" id="customBackgroundDarkColor" value="#fff3c4">
+                        </div>
+                        <div class="color-input-group">
+                            <label for="customTextColor">Texto Principal</label>
+                            <input type="color" id="customTextColor" value="#4e342e">
+                        </div>
+                        <div class="color-input-group">
+                            <label for="customTextLightColor">Texto Secundario</label>
+                            <input type="color" id="customTextLightColor" value="#8d6e63">
+                        </div>
+                        <div class="color-input-group">
+                            <label for="customBorderColor">Color de Borde</label>
+                            <input type="color" id="customBorderColor" value="#f0e68c">
+                        </div>
+                        <div class="color-input-group">
+                            <label for="customSidebarBgColor">Fondo Barra Lateral</label>
+                            <input type="color" id="customSidebarBgColor" value="#6d4c41">
+                        </div>
+                        <div class="color-input-group">
+                            <label for="customSidebarTextColor">Texto Barra Lateral</label>
+                            <input type="color" id="customSidebarTextColor" value="#fff8e1">
+                        </div>
+                        <div class="color-input-group">
+                            <label for="customCardBgColor">Fondo Tarjetas</label>
+                            <input type="color" id="customCardBgColor" value="#ffffff">
+                        </div>
+                    </div>
+                    <button class="btn primary-btn" id="applyCustomColorsBtn" style="margin-top: 15px; width: auto; padding: 10px 20px;">
+                        <i class="fas fa-check"></i> Aplicar Colores Personalizados
+                    </button>
+                </div>
+
+                <!-- Sección de Configuración de Fuente -->
+                <div class="customization-section">
+                    <h3><i class="fas fa-font"></i> Tipografía</h3>
+                    <p>Ajusta el tamaño y tipo de fuente</p>
+                    <div class="font-settings">
+                        <div class="setting-group">
+                            <label for="fontSizeSlider">Tamaño de Fuente</label>
+                            <input type="range" id="fontSizeSlider" min="12" max="20" value="14" step="1">
+                            <span id="fontSizeValue">14px</span>
+                        </div>
+                        <div class="setting-group">
+                            <label for="fontFamilySelect">Familia de Fuente</label>
+                            <select id="fontFamilySelect">
+                                <option value="Inter">Inter (Por defecto)</option>
+                                <option value="Roboto">Roboto</option>
+                                <option value="Open Sans">Open Sans</option>
+                                <option value="Lato">Lato</option>
+                                <option value="Montserrat">Montserrat</option>
+                                <option value="Poppins">Poppins</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección de Configuración de Sidebar -->
+                <div class="customization-section">
+                    <h3><i class="fas fa-bars"></i> Barra Lateral</h3>
+                    <p>Personaliza la apariencia de la barra lateral</p>
+                    <div class="sidebar-settings">
+                        <div class="setting-group">
+                            <label for="sidebarWidthSlider">Ancho de la Barra Lateral</label>
+                            <input type="range" id="sidebarWidthSlider" min="200" max="300" value="250" step="10">
+                            <span id="sidebarWidthValue">250px</span>
+                        </div>
+                        <div class="setting-group">
+                            <input type="checkbox" id="compactSidebar">
+                            <label for="compactSidebar">Modo Compacto</label>
+                        </div>
+                        <div class="setting-group">
+                            <input type="checkbox" id="sidebarIcons">
+                            <label for="sidebarIcons">Mostrar Solo Iconos</label>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn secondary-btn" id="resetAppearance">
+                    <i class="fas fa-undo"></i> Restablecer por Defecto
+                </button>
+                <button class="btn primary-btn" id="saveAppearance">
+                    <i class="fas fa-save"></i> Guardar Configuración
+                </button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Exponer el user_id de la sesión a JS global
+        window.user_id = {{ session['user_id'] if session['user_id'] else 'null' }};
+        window.current_user_name = "{{ user.first_name|e }}"; // Exponer el nombre del usuario actual de forma segura
+        window.user_role = "{{ user.role|e or 'Colaborador' }}";
+    </script>
+    <!-- MODAL AÑADIR COLABORADOR -->
+    <div id="modalAddUser" class="modal">
+        <div class="modal-content">
+            <span class="close-button" aria-label="Cerrar modal de añadir colaborador">&times;</span>
+            <h2><i class="fas fa-user-plus"></i> Añadir Colaborador</h2>
+            <form id="formAddUser">
+                <div class="form-group">
+                    <label for="addUserFirstName">Nombre</label>
+                    <input type="text" id="addUserFirstName" name="first_name" required placeholder="Ej: Juan">
+                </div>
+                <div class="form-group">
+                    <label for="addUserLastName">Apellido</label>
+                    <input type="text" id="addUserLastName" name="last_name" placeholder="Ej: Pérez">
+                </div>
+                <div class="form-group">
+                    <label for="addUserUsername">Usuario</label>
+                    <input type="text" id="addUserUsername" name="username" required placeholder="Ej: juanperez">
+                </div>
+                <div class="form-group">
+                    <label for="addUserEmail">Email</label>
+                    <input type="email" id="addUserEmail" name="email" required placeholder="Ej: juan@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="addUserPassword">Contraseña</label>
+                    <input type="password" id="addUserPassword" name="password" required placeholder="Contraseña temporal">
+                </div>
+                <div class="form-group">
+                    <label for="addUserRole">Rol</label>
+                    <select id="addUserRole" name="role" required>
+                        <option value="Colaborador">Colaborador</option>
+                        <option value="Administrador">Administrador</option>
+                        <option value="__other__">Otro (especificar)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="addUserRoleCustomContainer" style="display:none;">
+                    <label for="addUserRoleCustom">Nuevo Rol</label>
+                    <input type="text" id="addUserRoleCustom" name="role_custom" placeholder="Ej: Líder de Proyecto">
+                </div>
+                <button type="submit" class="btn primary-btn"><i class="fas fa-save"></i> Crear Colaborador</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        // Exponer el user_id de la sesión a JS global
+        window.user_id = {{ session['user_id'] if session['user_id'] else 'null' }};
+        window.current_user_name = "{{ user.first_name|e }}"; // Exponer el nombre del usuario actual de forma segura
+        window.user_role = "{{ user.role|e or 'Colaborador' }}";
+    </script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
+</html>
